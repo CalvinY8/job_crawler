@@ -21,7 +21,6 @@ import boto3
 import logging
 from botocore.exceptions import ClientError
 
-
 headers = {"Accept-Language": "en-US, en;q=0.5"}
 #-----
 
@@ -34,7 +33,10 @@ def upload_to_bucket():
 
     bucket = 'lambda-csv-data-source'
     s3_file = 'csvdata/jobs.csv'
-    s3 = boto3.client('s3', aws_access_key_id = ACCESS_KEY, aws_secret_access_key = SECRET_KEY)
+
+    #access the profile from ~/.aws/credentials
+    session = boto3.Session(profile_name='default')
+    s3 = session.client('s3')
 
     #delete prev. version of this file
     response = s3.delete_object(Bucket = bucket, Key = s3_file)
