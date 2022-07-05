@@ -128,7 +128,6 @@ def create_csv():
                 job_post.append(span["title"])
 
             #---get company from job posting
-            #ERROR sometimes companyName will be "Canonical-Jobs"
             companyInfo = jobCard.find("div", attrs = {"class" : ["company_location", "tapItem-gutter", "companyInfo"]}) #15 results
             companyName_span = companyInfo.find("span", attrs={"class": "companyName"})
             #company name will be contained within the span directly, as text
