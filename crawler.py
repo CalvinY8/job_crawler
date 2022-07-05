@@ -86,7 +86,7 @@ def create_csv():
     columns = ["title", "company", "location", "easilyApply", "urgentlyHiring", "summary", "link"]
 
     #sample_df means sample dataframe
-    #sample_df = pd.DataFrame(columns = columns)
+    sample_df = pd.DataFrame(columns = columns)
 
 
 
@@ -117,7 +117,7 @@ def create_csv():
 
             job_post = [] #for each job listing, make new array to hold data
 
-            #num = (len(sample_df) + 1)
+            num = (len(sample_df) + 1)
             #print(num) #tested that csv row number successfully increments.
 
             #---get title from job posting
@@ -154,7 +154,6 @@ def create_csv():
                 job_post.append("n")#not easily appliable
 
             #--get urgentlyHiring
-            #WARN: still broken
             tds = jobCard.find_all("td", class_="urgentlyHiring")
             if len(tds) > 0:
                 for span in tds:
@@ -181,31 +180,31 @@ def create_csv():
             #----printouts for testing----
             #print("page:" + str(pagenumber) + " ,columns: " + str(len(job_post))) #so, each page should have 15 entries of 7 columns each.
 
-            if pagenumber == 0: #if first page, show me results
-                print("title: " + job_post[0])
-                print("company: " + job_post[1])
-                print("location: " + job_post[2])
-                print("easilyApply: " + job_post[3])
-                print("urgentlyHiring: " + job_post[4])
-                print("summary: " + job_post[5])
-                print("link: " + job_post[6])
+            # if pagenumber == 0: #if first page, show me results
+            #     print("title: " + job_post[0])
+            #     print("company: " + job_post[1])
+            #     print("location: " + job_post[2])
+            #     print("easilyApply: " + job_post[3])
+            #     print("urgentlyHiring: " + job_post[4])
+            #     print("summary: " + job_post[5])
+            #     print("link: " + job_post[6])
 
-    #         #still within the for loop, append arr containing info of one job post, to a new row in the dataframe
-    #         #each loop, the number is incremented (see line 136)
-    #         sample_df.loc[num] = job_post
-
-
-    # #---outside both for loops, when all jobs scraped for all pages,
-    # #  save data to csv with relative filepath
-
-    # #but first clear the previously made csv file, so that each time the program is run, the results are like new
-    # filename = "jobs.csv"
-    # f = open(filename, "w+")
-    # f.close()
+            #still within the for loop, append arr containing info of one job post, to a new row in the dataframe
+            #each loop, the number is incremented (see line 136)
+            sample_df.loc[num] = job_post
 
 
-    # #now save to csv with relative filepath
-    # sample_df.to_csv("jobs.csv", encoding='utf-8')
+    #---outside both for loops, when all jobs scraped for all pages,
+    #  save data to csv with relative filepath
+
+    #but first clear the previously made csv file, so that each time the program is run, the results are like new
+    filename = "jobs.csv"
+    f = open(filename, "w+")
+    f.close()
+
+
+    #now save to csv with relative filepath
+    sample_df.to_csv("jobs.csv", encoding='utf-8')
 
     print('new csv data loaded')
 
@@ -222,3 +221,21 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# using selenium to work on a dynamically generated webpage
+
+# ->where is the element being clicked?
+
+# iframe id="vjs-container-iframe"
+# title="Details of the selected job"
+
+# ->what triggers that iframe to appear?
+# presumably, clicking on element with class="cardOutline tapItem"
+
+#YOU ARE HERE
+#https://stackoverflow.com/questions/68419150/python-selenium-how-can-i-get-access-to-this-part-of-the-website
+
+
+# selenium click on element
+# and then get the description.
