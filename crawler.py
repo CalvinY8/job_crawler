@@ -1,7 +1,7 @@
 #crawl multiple pages...set search terms on line 64
 #set number of pages to crawl on line 59
 
-
+import os
 import requests
 from requests import get
 from bs4 import BeautifulSoup
@@ -69,9 +69,16 @@ def getJobsFromURL(urlstring):
     soup = BeautifulSoup(page.text, "lxml")
     #print(soup.prettify())
     resultsCol = soup.find("td", {"id": "resultsCol"}) #we want only the resultsCol td
+    jobsList = resultsCol.find(name="ul", attrs={"class":"jobsearch-ResultsList"})
     #print(resultsCol.prettify())
     #go through the 15 jobs on the page
-    return resultsCol
+    return jobsList
+
+def delete_old_csv():
+    csv_file_name = 'jobs.csv'
+    if(os.path.exists(csv_file_name) and os.path.isfile(csv_file_name)):
+        os.remove(csv_file_name)
+        print('old csv removed')
 
 def create_csv():
     #---preparing the dataframe
@@ -79,14 +86,14 @@ def create_csv():
     columns = ["title", "company", "location", "easilyApply", "urgentlyHiring", "summary", "link"]
 
     #sample_df means sample dataframe
-    sample_df = pd.DataFrame(columns = columns)
+    #sample_df = pd.DataFrame(columns = columns)
 
 
 
     #---retrieve the data
     #the outer for loop increments the pages, giving each page to the inner for loop
     url = urlWithSearchTerms("python", "vancouver") #the search terms
-    print(url)
+    #print(url)
 
     for pagenumber in range(2): #enter the number of pages you want here.
 
@@ -96,105 +103,123 @@ def create_csv():
         if pagenumber == 0:
             page = requests.get(url) #the first page
         else:
-            page = requests.get(url + str(pagenumber-1) + "0") #the format to advance one page in indeed
+            page = requests.get(url + "&start=" + str(pagenumber-1) + "0") #the format to advance one page in indeed
+        
         soup = BeautifulSoup(page.text, 'html.parser')
 
         jobsList = getJobsFromURL(url) #get the code containing jobs from the rest of the html on that page.
 
         #the inner for loop gets all the jobs on a given page and adds them to the csv
-        for jobCard in jobsList.find_all(name="div", attrs={"class":"jobsearch-SerpJobCard"}):
+
+        for jobCard in jobsList.find_all(name="div", attrs={"class":"cardOutline", "class": "tapItem"}):
+
+            #15 jobCards per page
 
             job_post = [] #for each job listing, make new array to hold data
 
-            num = (len(sample_df) + 1)
+            #num = (len(sample_df) + 1)
             #print(num) #tested that csv row number successfully increments.
 
             #---get title from job posting
-            for a in jobCard.find_all("a", attrs={"data-tn-element":"jobTitle"}):
-                job_post.append(a["title"])
+            for h2 in jobCard.find_all("h2", attrs={"class":"jobTitle", "class": "jobTitle-newJob"}):
+                #get first span inside a
+                a = h2.find("a")
+                span = a.find("span")
+                job_post.append(span["title"])
 
             #---get company from job posting
-            company = jobCard.find_all("div", class_="company")
-            if len(company) > 0:
-                for title in company:
-                    job_post.append(title.text.strip())
-            else: #the span doesn't have the class 'company'
-                #so try to retrieve company from a span w/ class "result-link-source"
-                company = jobCard.find_all("span", class_="company")
-                for title in company:
-                    job_post.append(title.text.strip())
+            #ERROR sometimes companyName will be "Canonical-Jobs"
+            companyInfo = jobCard.find("div", attrs = {"class" : ["company_location", "tapItem-gutter", "companyInfo"]}) #15 results
+            companyName_span = companyInfo.find("span", attrs={"class": "companyName"})
+            #company name will be contained within the span directly, as text
+
+            #or, company name will be containend within an <a> inside the span, as text
+            companyName_a = companyInfo.find("a", attrs={"class": ["turnstileLink", "companyOverviewLink"]})
+
+            try:
+                job_post.append(companyName_span.text)
+
+            except AttributeError: #meaning name should be held in the <a> tag                
+                job_post.append(companyName_a.text)
 
             #---get location from job posting...location could be in a jobCard or a span, this function will find any element of class location
-            spans = jobCard.find_all(class_="location")
-            if len(spans) > 0:
-                for span in spans:
-                    commaRemovedLocation = span.text.replace(',', '') #remove the commas from the location for successful JSON parsing
-                    job_post.append(commaRemovedLocation.strip())
-            else:
-                job_post.append("location not found")
+            companyLocation_span = companyInfo.find("div", attrs={"class": "companyLocation"})
+            job_post.append(companyLocation_span.text)
 
             #---get easilyApply from job posting
-            spans = jobCard.find_all("span", class_="iaIconActive")
+            spans = jobCard.find_all("span", class_="iaIcon")
             if len(spans) > 0: #if not 0, a <span> was found of class iaiconActive, from inspection this class of span contains text: "easily applicable"
                 for span in spans:
-                    job_post.append(span.text)
+                    job_post.append('y')
             else:
-                job_post.append("negative")#not easily appliable
+                job_post.append("n")#not easily appliable
 
             #--get urgentlyHiring
+            #WARN: still broken
             tds = jobCard.find_all("td", class_="urgentlyHiring")
             if len(tds) > 0:
                 for span in tds:
-                    job_post.append(span.text)
+                    job_post.append('y')
             else:
-                job_post.append("negative") #not urgently hiring
+                job_post.append("n") #not urgently hiring
 
             #--get summary
-            summarydiv = jobCard.findAll('div', class_="summary")
-            for elem in summarydiv:
-                commaRemovedSummary = elem.text.replace(',', '') #remove the commas from the summary for successful JSON parsing
-                job_post.append(commaRemovedSummary.strip())
+            fulltext = "" #store in string
+            summary_div = jobCard.find('div', class_="job-snippet")
+            summary_ul = summary_div.find('ul')
+            summary_li_resultSet = summary_div.find_all('li')
+
+            for line in summary_li_resultSet:
+                commaRemovedSummary = line.text.replace(',', '') #remove the commas from the summary for successful JSON parsing
+                fulltext += commaRemovedSummary.strip()
+
+            job_post.append(fulltext)
 
             #--get link
-            for a in jobCard.find_all("a", class_="jobtitle turnstileLink"):
+            for a in jobCard.find_all("a", class_="jcs-JobTitle"):
                 job_post.append("https://ca.indeed.com" + a['href'])
 
             #----printouts for testing----
             #print("page:" + str(pagenumber) + " ,columns: " + str(len(job_post))) #so, each page should have 15 entries of 7 columns each.
 
-            # if pagenumber == 0: #if first page, show me results
-            #     print("title: " + job_post[0])
-            #     print("company: " + job_post[1])
-            #     print("location: " + job_post[2])
-            #     print("easilyApply: " + job_post[3])
-            #     print("urgentlyHiring: " + job_post[4])
-            #     print("summary: " + job_post[5])
-            #     print("link: " + job_post[6])
+            if pagenumber == 0: #if first page, show me results
+                print("title: " + job_post[0])
+                print("company: " + job_post[1])
+                print("location: " + job_post[2])
+                print("easilyApply: " + job_post[3])
+                print("urgentlyHiring: " + job_post[4])
+                print("summary: " + job_post[5])
+                print("link: " + job_post[6])
 
-            #still within the for loop, append arr containing info of one job post, to a new row in the dataframe
-            #each loop, the number is incremented (see line 136)
-            sample_df.loc[num] = job_post
-
-
-    #---outside both for loops, when all jobs scraped for all pages,
-    #  save data to csv with relative filepath
-
-    #but first clear the previously made csv file, so that each time the program is run, the results are like new
-    filename = "jobs.csv"
-    f = open(filename, "w+")
-    f.close()
+    #         #still within the for loop, append arr containing info of one job post, to a new row in the dataframe
+    #         #each loop, the number is incremented (see line 136)
+    #         sample_df.loc[num] = job_post
 
 
-    #now save to csv with relative filepath
-    sample_df.to_csv("jobs.csv", encoding='utf-8')
+    # #---outside both for loops, when all jobs scraped for all pages,
+    # #  save data to csv with relative filepath
 
+    # #but first clear the previously made csv file, so that each time the program is run, the results are like new
+    # filename = "jobs.csv"
+    # f = open(filename, "w+")
+    # f.close()
+
+
+    # #now save to csv with relative filepath
+    # sample_df.to_csv("jobs.csv", encoding='utf-8')
+
+    print('new csv data loaded')
 
 def main():
+
+    delete_old_csv()
+
+    sleep(2)
 
     create_csv()
     #use bucket jobsdatasource
     #use lambda lambda-role-for-jobs-s3-cloudwatch
-    upload_to_bucket()
+    #upload_to_bucket() #bucket no longer hosted
 
 if __name__ == "__main__":
     main()
