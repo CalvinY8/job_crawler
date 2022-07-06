@@ -92,13 +92,13 @@ def create_csv():
 
     #---preparing the dataframe
     #setup the dataframe with columns...a mismatch will occur if the length of the job_post array doesn't match the number of columns
-    columns = ["title", "company", "location", "easilyApply", "urgentlyHiring", "summary", "link"]
+    columns = ["title", "company", "location", "easilyApply", "urgentlyHiring", "summary", "link", "description"]
 
     #sample_df means sample dataframe
     sample_df = pd.DataFrame(columns = columns)
 
     fire_fox_options = webdriver.FirefoxOptions()
-    #fire_fox_options.headless = True
+    #fire_fox_options.headless = True #---comment out this line to see UI
     driver = webdriver.Firefox(options = fire_fox_options)
     driver.get(url)
 
@@ -200,29 +200,36 @@ def create_csv():
             #print(new_page_url)
             driver.get(new_page_url)
 
-            #close annoying popup if it appears
+            wait = WebDriverWait(driver, 25)
 
+            #close annoying popup if it appears
             if driver.find_elements(By.CSS_SELECTOR, "button.popover-x-button-close.icl-CloseButton"):
-                wait = WebDriverWait(driver, 15)
                 #element = WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.CLASS_NAME, "popover-x-button-close icl-CloseButton")))
                 btn = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "button.popover-x-button-close.icl-CloseButton")))
                 btn.click()
 
             #YOU ARE HERE
+            #   current goals is to run SQL query on the text
             #try to access i-frame
             wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "vjs-container-iframe")))
 
             #for some reason this fails sometimes, despite increasing the wait time from 10 to 15
             if driver.find_elements(By.ID, "jobDescriptionText"):
                 desc_element = driver.find_element_by_id('jobDescriptionText')
-                print(desc_element.text)
+                #print(desc_element.text)
+                job_post.append(desc_element.text)
+                #print("length = " + str(len(desc_element.text)))
+                #csv files have a limit of 32,767 characters per cell.
+                #no problem, cause description length is like 3000-8000 chars
+
             else:
-                print('n') #unable to get it
+                #print('n') #unable to get it. this should be visible on the csv. file.
+                job_post.append('--')
             
             driver.switch_to.default_content()
 
             #----printouts for testing----
-            #print("page:" + str(pagenumber) + " ,columns: " + str(len(job_post))) #so, each page should have 15 entries of 7 columns each.
+            #print("page:" + str(pagenumber) + " ,columns: " + str(len(job_post))) #so, each page should have 15 entries of 8 columns each.
 
             # if pagenumber == 0: #if first page, show me results
             #     print("title: " + job_post[0])
@@ -252,7 +259,7 @@ def create_csv():
 
     print('new csv data loaded')
 
-    #driver.close()
+    driver.close()
 
 def main():
 
@@ -298,3 +305,21 @@ if __name__ == "__main__":
 #how many hits on langauges, ex: python, C++, etc
 #how many hits on years of expeirence
 #and record all those number hits on csv file
+
+
+languages = ["python", "R", "SQL", "Java", "Julia", "Scala", "C", "C++", "JavaScript"]
+python_packages = ["TensorFlow", "NumPy", "SciPy", "Pandas", "Matplotlib", "Keras", "SciKit-Learn", "PyTorch", "Scrapy", "BeautifulSoup"]
+
+# right now we have a block of text stored in csv column
+# and I wanna run some SQL queries on the cells in that column
+# and put the resulting counts into new cells
+
+# thing is, it's gonna be a pain to run those queries by hand.
+
+# If only there was a way to do it dynamically.
+
+
+#anyway, I can probably graph the stuff by hand
+#the other issue is that it's really slow to wait for things to load.
+#maybe it's better to load the entire page instead of the preview.
+
