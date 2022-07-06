@@ -11,6 +11,11 @@ import lxml
 
 import urllib
 
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 import re
 
 from time import sleep
@@ -81,6 +86,10 @@ def delete_old_csv():
         print('old csv removed')
 
 def create_csv():
+
+    url = urlWithSearchTerms("python", "vancouver") #the search terms
+    #print(url)
+
     #---preparing the dataframe
     #setup the dataframe with columns...a mismatch will occur if the length of the job_post array doesn't match the number of columns
     columns = ["title", "company", "location", "easilyApply", "urgentlyHiring", "summary", "link"]
@@ -88,12 +97,13 @@ def create_csv():
     #sample_df means sample dataframe
     sample_df = pd.DataFrame(columns = columns)
 
-
+    fire_fox_options = webdriver.FirefoxOptions()
+    #fire_fox_options.headless = True
+    driver = webdriver.Firefox(options = fire_fox_options)
+    driver.get(url)
 
     #---retrieve the data
     #the outer for loop increments the pages, giving each page to the inner for loop
-    url = urlWithSearchTerms("python", "vancouver") #the search terms
-    #print(url)
 
     for pagenumber in range(2): #enter the number of pages you want here.
 
@@ -177,6 +187,26 @@ def create_csv():
             for a in jobCard.find_all("a", class_="jcs-JobTitle"):
                 job_post.append("https://ca.indeed.com" + a['href'])
 
+
+            #YOU ARE HERE
+            #---get data from iframe
+            #open the new page directly
+            # use selenium to access content in the iframe
+
+            #get the <a> of class jcs-JobTitle
+            id_a = jobCard.find("a", class_="jcs-JobTitle")
+            value1 = id_a['data-jk']
+            new_page_url = url + "&vjk=" + value1
+            #print(new_page_url)
+            driver.get(new_page_url)
+
+            # switch webdriver to i-frame
+            #YOU ARE HERE
+            #for some reason getting the i-frame doesn't work
+            # wait = WebDriverWait(driver, 10)
+            # wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "vjs-container-iframe")))
+            # element = driver.find_element_by_id('jobDescriptionText')
+
             #----printouts for testing----
             #print("page:" + str(pagenumber) + " ,columns: " + str(len(job_post))) #so, each page should have 15 entries of 7 columns each.
 
@@ -208,6 +238,8 @@ def create_csv():
 
     print('new csv data loaded')
 
+    #driver.close()
+
 def main():
 
     delete_old_csv()
@@ -233,9 +265,15 @@ if __name__ == "__main__":
 # ->what triggers that iframe to appear?
 # presumably, clicking on element with class="cardOutline tapItem"
 
-#YOU ARE HERE
 #https://stackoverflow.com/questions/68419150/python-selenium-how-can-i-get-access-to-this-part-of-the-website
 
+#according to this, you can upgrade your existing bs4 script and don't need to rewrite it
+#https://medium.com/ymedialabs-innovation/web-scraping-using-beautiful-soup-and-selenium-for-dynamic-page-2f8ad15efe25
+
+#the inefficent way is just to use html parser on each job card's href
+#https://stackoverflow.com/questions/67504953/how-to-get-full-job-descriptions-from-indeed-using-python-and-beautifulsoup
+
+#selenium firefox driver headless?
 
 # selenium click on element
 # and then get the description.
