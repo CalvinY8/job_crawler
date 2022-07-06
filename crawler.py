@@ -18,7 +18,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import re
 
-from time import sleep
+from time import sleep, perf_counter
 from random import randint
 
 #---for uploading csv data to aws mysql
@@ -69,15 +69,11 @@ def urlWithSearchTerms(jobTerm, location):
     return url
 
 #get the <td> containing job postings from the given URL
-def getJobsFromURL(urlstring):
+def getSoupFromURL(urlstring):
     page = requests.get(urlstring)
-    soup = BeautifulSoup(page.text, "lxml")
+    soup = BeautifulSoup(page.text, "lxml") #lxml for speed https://stackoverflow.com/questions/25714417/beautiful-soup-and-table-scraping-lxml-vs-html-parser
     #print(soup.prettify())
-    resultsCol = soup.find("td", {"id": "resultsCol"}) #we want only the resultsCol td
-    jobsList = resultsCol.find(name="ul", attrs={"class":"jobsearch-ResultsList"})
-    #print(resultsCol.prettify())
-    #go through the 15 jobs on the page
-    return jobsList
+    return soup
 
 def delete_old_csv():
     csv_file_name = 'jobs.csv'
@@ -98,7 +94,7 @@ def create_csv():
     sample_df = pd.DataFrame(columns = columns)
 
     fire_fox_options = webdriver.FirefoxOptions()
-    #fire_fox_options.headless = True #---comment out this line to see UI
+    fire_fox_options.headless = True #---comment out this line to see UI
     driver = webdriver.Firefox(options = fire_fox_options)
     driver.get(url)
 
@@ -109,15 +105,21 @@ def create_csv():
 
         sleep(randint(2,10))
 
-        page = ""
+        url_page = ""
         if pagenumber == 0:
-            page = requests.get(url) #the first page
+            url_page = url #the first page
         else:
-            page = requests.get(url + "&start=" + str(pagenumber-1) + "0") #the format to advance one page in indeed
-        
-        soup = BeautifulSoup(page.text, 'html.parser')
+            url_page = url + "&start=" + str(pagenumber) + "0" #advance one page in indeed
 
-        jobsList = getJobsFromURL(url) #get the code containing jobs from the rest of the html on that page.
+        #print(url_page) see that url incremented correctly
+
+        soup = getSoupFromURL(url_page) #get the code containing jobs from the rest of the html on that page.
+
+        resultsCol = soup.find("td", {"id": "resultsCol"}) #we want only the resultsCol td
+        jobsList = resultsCol.find(name="ul", attrs={"class":"jobsearch-ResultsList"})
+        #print(resultsCol.prettify())
+        
+        #go through the 15 jobs on the page
 
         #the inner for loop gets all the jobs on a given page and adds them to the csv
 
@@ -263,11 +265,19 @@ def create_csv():
 
 def main():
 
+    start = perf_counter()
+
     delete_old_csv()
 
     sleep(2)
 
     create_csv()
+    #use bucket jobsdatasource
+    #use lambda lambda-role-for-jobs-s3-cloudwatch
+    #upload_to_bucket() #bucket no longer hosted
+
+    end = perf_counter()
+    print("total time (seconds): " + str(end-start)) # float value of time in seconds #roughly 50 seconds for 2 pages
     #use bucket jobsdatasource
     #use lambda lambda-role-for-jobs-s3-cloudwatch
     #upload_to_bucket() #bucket no longer hosted
