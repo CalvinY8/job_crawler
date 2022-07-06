@@ -105,7 +105,7 @@ def create_csv():
     #---retrieve the data
     #the outer for loop increments the pages, giving each page to the inner for loop
 
-    for pagenumber in range(2): #enter the number of pages you want here.
+    for pagenumber in range(1): #enter the number of pages you want here.
 
         sleep(randint(2,10))
 
@@ -200,12 +200,26 @@ def create_csv():
             #print(new_page_url)
             driver.get(new_page_url)
 
-            # switch webdriver to i-frame
+            #close annoying popup if it appears
+
+            if driver.find_elements(By.CSS_SELECTOR, "button.popover-x-button-close.icl-CloseButton"):
+                wait = WebDriverWait(driver, 15)
+                #element = WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.CLASS_NAME, "popover-x-button-close icl-CloseButton")))
+                btn = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "button.popover-x-button-close.icl-CloseButton")))
+                btn.click()
+
             #YOU ARE HERE
-            #for some reason getting the i-frame doesn't work
-            # wait = WebDriverWait(driver, 10)
-            # wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "vjs-container-iframe")))
-            # element = driver.find_element_by_id('jobDescriptionText')
+            #try to access i-frame
+            wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "vjs-container-iframe")))
+
+            #for some reason this fails sometimes, despite increasing the wait time from 10 to 15
+            if driver.find_elements(By.ID, "jobDescriptionText"):
+                desc_element = driver.find_element_by_id('jobDescriptionText')
+                print(desc_element.text)
+            else:
+                print('n') #unable to get it
+            
+            driver.switch_to.default_content()
 
             #----printouts for testing----
             #print("page:" + str(pagenumber) + " ,columns: " + str(len(job_post))) #so, each page should have 15 entries of 7 columns each.
@@ -277,3 +291,10 @@ if __name__ == "__main__":
 
 # selenium click on element
 # and then get the description.
+
+
+#the main objective is to analyze job description data
+#record how many hits on software , say, R, pandas, numpy, etc.
+#how many hits on langauges, ex: python, C++, etc
+#how many hits on years of expeirence
+#and record all those number hits on csv file
