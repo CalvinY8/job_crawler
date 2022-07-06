@@ -101,7 +101,7 @@ def create_csv():
     #---retrieve the data
     #the outer for loop increments the pages, giving each page to the inner for loop
 
-    for pagenumber in range(1): #enter the number of pages you want here.
+    for pagenumber in range(2): #enter the number of pages you want here.
 
         sleep(randint(2,10))
 
@@ -277,7 +277,7 @@ def main():
     #upload_to_bucket() #bucket no longer hosted
 
     end = perf_counter()
-    print("total time (seconds): " + str(end-start)) # float value of time in seconds #roughly 50 seconds for 2 pages
+    print("total time (seconds): " + str(end-start)) # float value of time in seconds #roughly 100 seconds for 2 pages
     #use bucket jobsdatasource
     #use lambda lambda-role-for-jobs-s3-cloudwatch
     #upload_to_bucket() #bucket no longer hosted
