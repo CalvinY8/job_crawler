@@ -1,5 +1,5 @@
-#crawl multiple pages...set search terms on line 64
-#set number of pages to crawl on line 59
+#set search terms on line 86
+#set number of pages to crawl on line 105
 
 import os
 import requests
@@ -18,7 +18,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import re
 
-from time import sleep
+from time import sleep, perf_counter
 from random import randint
 
 #---for uploading csv data to aws mysql
@@ -69,15 +69,11 @@ def urlWithSearchTerms(jobTerm, location):
     return url
 
 #get the <td> containing job postings from the given URL
-def getJobsFromURL(urlstring):
+def getSoupFromURL(urlstring):
     page = requests.get(urlstring)
-    soup = BeautifulSoup(page.text, "lxml")
+    soup = BeautifulSoup(page.text, "lxml") #lxml for speed https://stackoverflow.com/questions/25714417/beautiful-soup-and-table-scraping-lxml-vs-html-parser
     #print(soup.prettify())
-    resultsCol = soup.find("td", {"id": "resultsCol"}) #we want only the resultsCol td
-    jobsList = resultsCol.find(name="ul", attrs={"class":"jobsearch-ResultsList"})
-    #print(resultsCol.prettify())
-    #go through the 15 jobs on the page
-    return jobsList
+    return soup
 
 def delete_old_csv():
     csv_file_name = 'jobs.csv'
@@ -97,27 +93,34 @@ def create_csv():
     #sample_df means sample dataframe
     sample_df = pd.DataFrame(columns = columns)
 
-    fire_fox_options = webdriver.FirefoxOptions()
-    #fire_fox_options.headless = True #---comment out this line to see UI
-    driver = webdriver.Firefox(options = fire_fox_options)
-    driver.get(url)
+    #===selenium part===
+    # fire_fox_options = webdriver.FirefoxOptions()
+    # #fire_fox_options.headless = True #---comment out this line to see UI
+    # driver = webdriver.Firefox(options = fire_fox_options)
+    # driver.get(url)
 
     #---retrieve the data
     #the outer for loop increments the pages, giving each page to the inner for loop
 
-    for pagenumber in range(1): #enter the number of pages you want here.
+    for pagenumber in range(2): #enter the number of pages you want here.
 
         sleep(randint(2,10))
 
-        page = ""
+        url_page = ""
         if pagenumber == 0:
-            page = requests.get(url) #the first page
+            url_page = url #the first page
         else:
-            page = requests.get(url + "&start=" + str(pagenumber-1) + "0") #the format to advance one page in indeed
-        
-        soup = BeautifulSoup(page.text, 'html.parser')
+            url_page = url + "&start=" + str(pagenumber) + "0" #advance one page in indeed
 
-        jobsList = getJobsFromURL(url) #get the code containing jobs from the rest of the html on that page.
+        #print(url_page) see that url incremented correctly
+
+        soup = getSoupFromURL(url_page) #get the code containing jobs from the rest of the html on that page.
+
+        resultsCol = soup.find("td", {"id": "resultsCol"}) #we want only the resultsCol td
+        jobsList = resultsCol.find(name="ul", attrs={"class":"jobsearch-ResultsList"})
+        #print(resultsCol.prettify())
+        
+        #go through the 15 jobs on the page
 
         #the inner for loop gets all the jobs on a given page and adds them to the csv
 
@@ -184,49 +187,68 @@ def create_csv():
             job_post.append(fulltext)
 
             #--get link
-            for a in jobCard.find_all("a", class_="jcs-JobTitle"):
-                job_post.append("https://ca.indeed.com" + a['href'])
+            id_a = jobCard.find("a", class_="jcs-JobTitle")
+            job_url = "https://ca.indeed.com" + id_a['href'] #link to individual job
+            job_post.append(job_url)
 
 
-            #YOU ARE HERE
+            #===using selenium===
+
             #---get data from iframe
             #open the new page directly
             # use selenium to access content in the iframe
 
             #get the <a> of class jcs-JobTitle
-            id_a = jobCard.find("a", class_="jcs-JobTitle")
             value1 = id_a['data-jk']
             new_page_url = url + "&vjk=" + value1
             #print(new_page_url)
-            driver.get(new_page_url)
 
-            wait = WebDriverWait(driver, 25)
+            # driver.get(new_page_url)
 
-            #close annoying popup if it appears
-            if driver.find_elements(By.CSS_SELECTOR, "button.popover-x-button-close.icl-CloseButton"):
-                #element = WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.CLASS_NAME, "popover-x-button-close icl-CloseButton")))
-                btn = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "button.popover-x-button-close.icl-CloseButton")))
-                btn.click()
+            # wait = WebDriverWait(driver, 25)
+
+            # #close annoying popup if it appears
+            # if driver.find_elements(By.CSS_SELECTOR, "button.popover-x-button-close.icl-CloseButton"):
+            #     #element = WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.CLASS_NAME, "popover-x-button-close icl-CloseButton")))
+            #     btn = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "button.popover-x-button-close.icl-CloseButton")))
+            #     btn.click()
+
+            # #try to access i-frame
+            # wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "vjs-container-iframe")))
+
+            # #for some reason this fails sometimes, despite increasing the wait time from 10 to 15
+            # if driver.find_elements(By.ID, "jobDescriptionText"):
+            #     desc_element = driver.find_element_by_id('jobDescriptionText')
+            #     #print(desc_element.text)
+            #     job_post.append(desc_element.text)
+            #     #print("length = " + str(len(desc_element.text)))
+            #     #csv files have a limit of 32,767 characters per cell.
+            #     #no problem, cause description length is like 3000-8000 chars
+
+            # else:
+            #     #print('n') #unable to get it. this should be visible on the csv. file.
+            #     job_post.append('--')
+            
+            # driver.switch_to.default_content()
+
+            #===selenium end===
 
             #YOU ARE HERE
-            #   current goals is to run SQL query on the text
-            #try to access i-frame
-            wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "vjs-container-iframe")))
+            #using beautifulsoup instead of selenium. faster?
 
-            #for some reason this fails sometimes, despite increasing the wait time from 10 to 15
-            if driver.find_elements(By.ID, "jobDescriptionText"):
-                desc_element = driver.find_element_by_id('jobDescriptionText')
-                #print(desc_element.text)
-                job_post.append(desc_element.text)
-                #print("length = " + str(len(desc_element.text)))
-                #csv files have a limit of 32,767 characters per cell.
-                #no problem, cause description length is like 3000-8000 chars
+            individual_job_soup = getSoupFromURL(job_url)
 
-            else:
-                #print('n') #unable to get it. this should be visible on the csv. file.
-                job_post.append('--')
-            
-            driver.switch_to.default_content()
+            #wait for load
+            sleep(2)
+
+            #go find the description from the soup
+            job_desc = individual_job_soup.find("div", {"id": "jobDescriptionText"})
+
+            #somehow recursively find the inner text
+
+            #job_desc = "--"
+
+            job_post.append(job_desc.text.strip())
 
             #----printouts for testing----
             #print("page:" + str(pagenumber) + " ,columns: " + str(len(job_post))) #so, each page should have 15 entries of 8 columns each.
@@ -259,9 +281,12 @@ def create_csv():
 
     print('new csv data loaded')
 
-    driver.close()
+    #===for selenium===
+    #driver.close()
 
 def main():
+
+    start = perf_counter()
 
     delete_old_csv()
 
@@ -271,6 +296,9 @@ def main():
     #use bucket jobsdatasource
     #use lambda lambda-role-for-jobs-s3-cloudwatch
     #upload_to_bucket() #bucket no longer hosted
+
+    end = perf_counter()
+    print("total time (seconds): " + str(end-start)) # float value of time in seconds #roughly 100 seconds for 2 pages
 
 if __name__ == "__main__":
     main()
