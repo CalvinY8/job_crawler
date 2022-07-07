@@ -55,7 +55,9 @@ def create_csv():
 
     #---preparing the dataframe
     #setup the dataframe with columns...a mismatch will occur if the length of the job_post array doesn't match the number of columns
-    #columns = ["title", "company", "location", "easilyApply", "urgentlyHiring", "summary", "link", "description"]
+    columns = ["title", "company", "location", "easilyApply", "urgentlyHiring", "summary", "link", "description"]
+
+    write_list_into_csv_as_row(columns)
 
     #---retrieve the data
     #the outer for loop increments the pages, giving each page to the inner for loop
@@ -88,6 +90,13 @@ def create_csv():
 
 #     return codecs.charmap_encode(input,self.errors,encoding_table)[0]
 # UnicodeEncodeError: 'charmap' codec can't encode character '\u2010' in position 814: character maps to <undefined>
+
+
+def write_list_into_csv_as_row(lis):
+    with open("jobs.csv", mode="a", encoding="utf-8") as f1: #mode="a" creates csv if not exist, otherwise appends to it
+        
+        writer = csv.writer(f1, delimiter=",")
+        writer.writerow(lis) #directly enter the list into the csv
 
 
 def process_url_single(url_page):
@@ -211,15 +220,16 @@ def process_url_single(url_page):
         #the most vital part, using thread lock to write to the csv
         #https://stackoverflow.com/questions/66342780/python-multithreading-output-to-csv-file
         with csv_writer_lock:
-            with open("jobs.csv", mode="a", encoding="utf-8") as f1: #mode="a" creates csv if not exist, otherwise appends to it
-                
-                writer = csv.writer(f1, delimiter=",")
-                writer.writerow(job_post) #directly enter the list into the csv
+            write_list_into_csv_as_row(job_post)
 
                 #print('appending')
 
                 #can also use writerows for nested list
                 #https://stackoverflow.com/questions/33091980/difference-between-writerow-and-writerows-methods-of-python-csv-module
+
+
+                #it is supposed to be fastest using phantomJS and asyncio
+                #https://oxylabs.io/blog/how-to-make-web-scraping-faster
 
 
 
