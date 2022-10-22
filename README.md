@@ -7,7 +7,7 @@ From each resulting job posting, the crawler will get 7 fields:
 title ,company ,location ,easilyApply ,urgentlyHiring ,summary ,link
 
 These fields are used to create a .CSV file.
-Uploadeding this data into online Amazon S3 storage will trigger a lambda function.
+Uploading this data into online Amazon S3 storage will trigger a lambda function (.js)
 The lambda function loads the CSV data into the hosted Amazon mysql database.
 
 Software such as SQL workbench or MySQL workbench can make queries to the database, allowing faster sifting through job postings.
