@@ -1,7 +1,7 @@
 # job_crawler
 search through jobs more efficently
 
-how it works:
+how it works:</br>
 The user specifies search terms and number of pages to get from indeed.</br>
 From each resulting job posting, the crawler will get 7 fields:</br>
 title ,company ,location ,easilyApply ,urgentlyHiring ,summary ,link</br>
