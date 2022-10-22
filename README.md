@@ -2,7 +2,7 @@
 search through jobs more efficently
 
 how it works:
-The user specifies search terms and number of pages to get from indeed.
+The user specifies search terms and number of pages to get from indeed.</br>
 From each resulting job posting, the crawler will get 7 fields:
 title ,company ,location ,easilyApply ,urgentlyHiring ,summary ,link
 
