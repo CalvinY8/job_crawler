@@ -1,5 +1,5 @@
-#crawl multiple pages...set search terms on line 64
-#set number of pages to crawl on line 59
+#crawl multiple pages...set search terms on line 86
+#set number of pages to crawl on line 104
 
 import os
 import requests
