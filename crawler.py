@@ -313,7 +313,7 @@ if __name__ == "__main__":
 #the main objective is to analyze job description data
 #record how many hits on software , say, R, pandas, numpy, etc.
 #how many hits on langauges, ex: python, C++, etc
-#how many hits on years of expeirence
+#how many hits on years of experience
 #and record all those number hits on csv file
 
 
