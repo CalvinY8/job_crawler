@@ -4,7 +4,7 @@ search through jobs more efficently
 how it works:</br>
 The user specifies search terms and number of pages to get from indeed.</br>
 From each resulting job posting, the crawler will get 7 fields:</br>
-title ,company ,location ,easilyApply ,urgentlyHiring ,summary ,link</br>
+title, company, location, easilyApply, urgentlyHiring, summary, link</br>
 
 These fields are used to create a .CSV file.</br>
 Uploading this data into online Amazon S3 storage will trigger a lambda function (.js)</br>
