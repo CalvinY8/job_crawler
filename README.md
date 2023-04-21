@@ -1,6 +1,6 @@
 # job_crawler
 demo available https://youtu.be/1XDQ4QAyug0
-search through jobs more efficently
+search through jobs more efficently </br>
 
 how it works:</br>
 The user specifies search terms and number of pages to get from indeed.</br>
